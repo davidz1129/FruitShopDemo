@@ -49,7 +49,7 @@ public class PricingService : IPricingService
                 foreach (var action in rule.Actions)
                 {
                     var strategy = _factory.GetActionStrategy(action.ActionType);
-                    runningTotal = strategy.Apply(action, runningTotal, context.OriginalBasePrice);
+                    runningTotal = strategy.Apply(action, runningTotal, context);
                     actionDescriptions.Add(strategy.Describe(action));
                 }
 

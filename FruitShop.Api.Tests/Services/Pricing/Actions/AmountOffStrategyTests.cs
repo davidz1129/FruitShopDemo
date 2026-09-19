@@ -23,6 +23,22 @@ public sealed class AmountOffStrategyTests
     }
 
     [Fact]
+    public void Apply_ShouldSubtractRunningTotalAmountOnceFromTheOrderLine()
+    {
+        // Arrange
+        var strategy = new AmountOffStrategy();
+        var action = new PriceRuleAction { ActionType = ActionType.AmountOff, Amount = 5m, CalculationBase = CalculationBase.RunningTotal };
+        var context = new PricingContext(1, "RETAIL", 100m, new DateTime(2026, 9, 20), 10m);
+
+        // Act
+        var unitPrice = strategy.Apply(action, 10m, context);
+
+        // Assert
+        unitPrice.Should().Be(9.95m);
+        (unitPrice * context.Quantity).Should().Be(995m);
+    }
+
+    [Fact]
     public void Describe_ShouldFormatCurrencyAmount_WhenActionHasFractionalAmount()
     {
         // Arrange

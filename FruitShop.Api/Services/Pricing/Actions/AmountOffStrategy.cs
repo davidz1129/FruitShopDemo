@@ -16,6 +16,22 @@ public class AmountOffStrategy : IPriceActionStrategy
         return targetBase - action.Amount;
     }
 
+    public decimal Apply(PriceRuleAction action, decimal runningUnitPrice, PricingContext context)
+    {
+        if (action.CalculationBase == CalculationBase.OriginalBase)
+        {
+            return Apply(action, runningUnitPrice, context.OriginalBasePrice);
+        }
+
+        if (context.Quantity <= 0)
+        {
+            return Apply(action, runningUnitPrice, context.OriginalBasePrice);
+        }
+
+        decimal runningLineTotal = runningUnitPrice * context.Quantity;
+        return (runningLineTotal - action.Amount) / context.Quantity;
+    }
+
     public string Describe(PriceRuleAction action) =>
         $"${action.Amount.ToString("0.####", CultureInfo.InvariantCulture)} off";
 }
