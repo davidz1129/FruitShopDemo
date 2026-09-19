@@ -85,7 +85,7 @@ public sealed class CoreDomainTests
     var calculation = service.CalculatePrice(context, [rule]);
 
     Assert.Equal(7, calculation.UnitPriceApplied);
-    Assert.Equal("Base price $10.00; adjusted by: VIP Basket Discount ($3 off)", calculation.PriceChangeReason);
+    Assert.Equal("Base price $10.00; adjusted by: VIP Basket Discount ($3 off (Running Total))", calculation.PriceChangeReason);
     }
 
     [Fact]

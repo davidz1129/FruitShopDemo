@@ -1,5 +1,7 @@
 using FruitShop.Api.Models;
+using System.ComponentModel;
 using System.Globalization;
+using System.Reflection;
 
 namespace FruitShop.Api.Services.PriceActionStrategy;
 
@@ -33,5 +35,12 @@ public class AmountOffStrategy : IPriceActionStrategy
     }
 
     public string Describe(PriceRuleAction action) =>
-        $"${action.Amount.ToString("0.####", CultureInfo.InvariantCulture)} off";
+        $"${action.Amount.ToString("0.####", CultureInfo.InvariantCulture)} off ({GetDescription(action.CalculationBase)})";
+
+    private static string GetDescription(CalculationBase calculationBase) =>
+        calculationBase.GetType()
+            .GetField(calculationBase.ToString())?
+            .GetCustomAttribute<DescriptionAttribute>()?
+            .Description
+        ?? calculationBase.ToString();
 }

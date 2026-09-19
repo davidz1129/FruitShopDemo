@@ -48,6 +48,6 @@ public sealed class AmountOffStrategyTests
         var result = strategy.Describe(new PriceRuleAction { Amount = 2.75m });
 
         // Assert
-        result.Should().Be("$2.75 off");
+        result.Should().Be("$2.75 off (Running Total)");
     }
 }

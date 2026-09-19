@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using System.ComponentModel;
 
 namespace FruitShop.Api.Models;
 
@@ -29,7 +30,9 @@ public enum ActionType
 
 public enum CalculationBase
 {
+    [Description("Original Base Price")]
     OriginalBase,
+    [Description("Running Total")]
     RunningTotal
 }
 
