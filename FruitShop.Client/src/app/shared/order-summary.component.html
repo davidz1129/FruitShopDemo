@@ -1,0 +1,48 @@
+<aside class="draft-panel" aria-labelledby="order-summary-title">
+  <div class="draft-header">
+    <div>
+      <p class="eyebrow">{{ eyebrow() }}</p>
+      <h2 id="order-summary-title">{{ title() }}</h2>
+    </div>
+    <svg lucideShoppingBasket [size]="24" aria-hidden="true"></svg>
+  </div>
+
+  @if (lines().length === 0) {
+    <div class="draft-empty">
+      <svg lucidePackagePlus [size]="26" aria-hidden="true"></svg>
+      <p>{{ emptyMessage() }}</p>
+    </div>
+  } @else {
+    <ol class="draft-lines">
+      @for (line of lines(); track line.variantId; let index = $index) {
+        <li>
+          <div class="draft-line-top">
+            <div>
+              <strong>{{ line.sku }}</strong>
+              <span>{{ line.quantity | number:'1.0-4' }} {{ line.unitOfMeasure }} at {{ line.unitPriceApplied | currency:'USD':'symbol':'1.2-2' }}</span>
+            </div>
+            <div class="line-actions">
+              <strong>{{ line.lineSubtotal | currency:'USD':'symbol':'1.2-2' }}</strong>
+              @if (removable()) {
+                <button type="button" class="icon-button" (click)="lineRemoved.emit(index)" title="Remove item" aria-label="Remove {{ line.sku }} from draft">
+                  <svg lucideTrash [size]="17" aria-hidden="true"></svg>
+                </button>
+              }
+            </div>
+          </div>
+          <p>{{ line.priceChangeReason }}</p>
+        </li>
+      }
+    </ol>
+  }
+
+  <div class="draft-total">
+    <span>{{ totalLabel() }}</span>
+    <strong>{{ total() | currency:'USD':'symbol':'1.2-2' }}</strong>
+  </div>
+  @if (actionLabel(); as actionLabel) {
+    <button class="submit-button" type="button" [disabled]="actionDisabled()" (click)="actionClicked.emit()">
+      {{ actionLabel }}
+    </button>
+  }
+</aside>

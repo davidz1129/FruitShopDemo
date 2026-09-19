@@ -1,0 +1,44 @@
+# .NET build and test output
+**/[Bb]in/
+**/[Oo]bj/
+**/TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+# Visual Studio and local user settings
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio Code workspace state
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/mcp.json
+
+# Angular and Node.js generated files
+**/node_modules/
+**/.angular/
+**/dist/
+**/coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local environment and SQLite database files
+.env
+.env.*
+!.env.example
+*.db
+*.db-shm
+*.db-wal
+
+# Operating-system files
+.DS_Store
+Thumbs.db

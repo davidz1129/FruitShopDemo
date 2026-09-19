@@ -1,0 +1,67 @@
+<main class="order-workspace">
+  <app-top-links-bar />
+
+  <section class="order-shell orders-shell" aria-label="Order history">
+    <div class="page-heading">
+      <div>
+        <p class="eyebrow">Order history</p>
+      </div>
+    </div>
+
+    @if (error(); as errorMessage) {
+      <p class="alert" role="alert">{{ errorMessage }}</p>
+    }
+
+    <div class="history-grid">
+      <aside class="order-list-panel" aria-labelledby="order-list-title">
+        <div class="order-list-header">
+          <p class="eyebrow">All orders</p>
+          <h2 id="order-list-title">Order numbers</h2>
+        </div>
+
+        @if (ordersLoading()) {
+          <p class="empty-copy">Loading orders...</p>
+        } @else if (orders().length === 0) {
+          <p class="empty-copy">No orders have been submitted yet.</p>
+        } @else {
+          <ol class="order-list">
+            @for (order of orders(); track order.id) {
+              <li>
+                <button type="button" class="order-list-item" [class.selected]="selectedOrder()?.id === order.id" (click)="selectOrder(order.id)">
+                  <strong>Order #{{ order.id }}</strong>
+                  <time [attr.datetime]="order.createdAt">{{ order.createdAt | date:'medium' }}</time>
+                </button>
+              </li>
+            }
+          </ol>
+          @if (ordersTotalPages() > 1) {
+            <nav class="pagination" aria-label="Order pages">
+              <button type="button" class="pager-command" (click)="changeOrdersPage(ordersPage() - 1)" [disabled]="ordersPage() === 1" aria-label="Previous order page" title="Previous order page">
+                <svg lucideChevronLeft [size]="17" aria-hidden="true"></svg>
+              </button>
+              <span>Page {{ ordersPage() }} of {{ ordersTotalPages() }}</span>
+              <button type="button" class="pager-command" (click)="changeOrdersPage(ordersPage() + 1)" [disabled]="ordersPage() === ordersTotalPages()" aria-label="Next order page" title="Next order page">
+                <svg lucideChevronRight [size]="17" aria-hidden="true"></svg>
+              </button>
+            </nav>
+          }
+        }
+      </aside>
+
+      <section class="order-detail" aria-live="polite">
+        @if (selectedOrderLoading()) {
+          <p class="empty-copy">Loading order details...</p>
+        } @else if (selectedOrder(); as order) {
+          <app-order-summary
+            [title]="'Order #' + order.id"
+            [eyebrow]="order.customerTier + ' tier | ' + (order.createdAt | date:'medium')"
+            [lines]="summaryLines()"
+            emptyMessage="This order has no items."
+            totalLabel="Order total" />
+        } @else if (!ordersLoading() && orders().length > 0) {
+          <p class="empty-copy">Select an order number to view its items.</p>
+        }
+      </section>
+    </div>
+  </section>
+</main>

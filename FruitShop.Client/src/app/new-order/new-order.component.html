@@ -1,0 +1,167 @@
+<main class="order-workspace">
+  <app-top-links-bar />
+
+  <section class="order-shell" aria-label="Order builder">
+    <div class="page-heading">
+      <div>
+        <p class="eyebrow">Order builder</p>
+      </div>
+    </div>
+
+    @if (error()) {
+      <p class="alert" role="alert">{{ error() }}</p>
+    }
+
+    @if (confirmation(); as order) {
+      <div class="confirmation" role="status">
+        <span>Order #{{ order.id }} was submitted with {{ order.items.length }} item{{ order.items.length === 1 ? '' : 's' }}.</span>
+        <button type="button" (click)="confirmation.set(null)">Dismiss</button>
+      </div>
+    }
+
+    <div class="order-grid">
+      <form class="builder" [formGroup]="itemForm" (ngSubmit)="$event.preventDefault()">
+        <section class="form-section tier-section" aria-labelledby="tier-title">
+          <div class="section-heading">
+            <span class="step">01</span>
+            <div>
+              <h2 id="tier-title">Customer tier</h2>
+              <p>Pricing rules are filtered for this customer first.</p>
+            </div>
+          </div>
+          <div class="tier-options" role="radiogroup" aria-label="Customer tier">
+            @for (tier of customerTiers; track tier) {
+              <label class="tier-option" [class.selected]="itemForm.controls.customerTier.value === tier">
+                <input type="radio" formControlName="customerTier" [value]="tier" />
+                <span>{{ tier }}</span>
+              </label>
+            }
+          </div>
+          @if (customerTierLocked()) {
+            <p class="field-note">Tier is locked while this draft contains items.</p>
+          }
+        </section>
+
+        <section class="form-section" aria-labelledby="item-title">
+          <div class="section-heading">
+            <span class="step">02</span>
+            <div>
+              <h2 id="item-title">Choose an item</h2>
+              <p>Every product variant is available for a new order.</p>
+            </div>
+          </div>
+
+          <div class="item-fields-row">
+            <div>
+              <label class="input-label" for="variant">Product variant</label>
+              <select id="variant" formControlName="variantId">
+                <option [ngValue]="null">Select a product variant</option>
+                @for (product of productVariantGroups(); track product.name) {
+                  <optgroup [label]="product.name">
+                    @for (variant of product.variants; track variant.id) {
+                      <option [ngValue]="variant.id">{{ variant.sku }} - {{ variant.basePrice | currency:'USD':'symbol':'1.2-2' }}/{{ variant.uomCode }}</option>
+                    }
+                  </optgroup>
+                }
+              </select>
+            </div>
+
+            <div class="quantity-row">
+              <div>
+                <label class="input-label" for="quantity">Quantity</label>
+                <input id="quantity" type="number" formControlName="quantity" [min]="quantityMinimum()" [step]="quantityStep()" [attr.inputmode]="quantityInputMode()" />
+                @if (itemForm.controls.quantity.value > 0 && !quantityIsValid()) {
+                  <p class="field-note">{{ quantityValidationMessage() }}</p>
+                }
+              </div>
+              <span class="unit-label">{{ selectedVariant()?.uomCode || 'unit' }}</span>
+            </div>
+          </div>
+          @if (productTotalPages() > 1) {
+            <nav class="pagination" aria-label="Product pages">
+              <button type="button" class="pager-command" (click)="changeProductPage(productPage() - 1)" [disabled]="productPage() === 1" aria-label="Previous product page" title="Previous product page">
+                <svg lucideChevronLeft [size]="17" aria-hidden="true"></svg>
+              </button>
+              <span>Page {{ productPage() }} of {{ productTotalPages() }}</span>
+              <button type="button" class="pager-command" (click)="changeProductPage(productPage() + 1)" [disabled]="productPage() === productTotalPages()" aria-label="Next product page" title="Next product page">
+                <svg lucideChevronRight [size]="17" aria-hidden="true"></svg>
+              </button>
+            </nav>
+          }
+          @if (selectedDraftLine(); as existingLine) {
+            <p class="field-note">Already in draft: {{ existingLine.quantity | number:'1.0-4' }} {{ existingLine.unitOfMeasure }}. Changing the quantity updates this item.</p>
+          }
+        </section>
+
+        <section class="form-section pricing-section" aria-label="Pricing">
+
+          @if (!itemForm.controls.customerTier.value || !itemForm.controls.variantId.value) {
+            <p class="empty-copy">Select a tier and product variant to inspect its pricing rules.</p>
+          } @else if (calculating()) {
+            <p class="loading-copy">Calculating item price...</p>
+          } @else if (preview(); as itemPreview) {
+            <div class="rules-panel">
+              <div class="rules-heading">
+                <h3>Active price rules</h3>
+                <span>{{ itemPreview.activePriceRules.length }}</span>
+              </div>
+              @if (itemPreview.activePriceRules.length === 0) {
+                <p class="empty-copy">No active pricing rules apply to this variant and customer tier.</p>
+              } @else {
+                <ul class="rule-list">
+                  @for (rule of itemPreview.activePriceRules; track rule.id) {
+                    <li>
+                      <div class="rule-title">
+                        <strong>{{ rule.name }}</strong>
+                        <span>Priority {{ rule.priority }}</span>
+                      </div>
+                      <p>{{ rule.isStackable ? 'Can stack with later rules' : 'Stops later rules when applied' }}</p>
+                      <div class="rule-detail">
+                        @for (condition of rule.conditions; track $index) {
+                          <span>{{ describeCondition(condition) }}</span>
+                        }
+                        @for (action of rule.actions; track $index) {
+                          <b>{{ describeAction(action) }}</b>
+                        }
+                      </div>
+                    </li>
+                  }
+                </ul>
+              }
+            </div>
+
+            @if (quantityIsValid()) {
+              <div class="price-result">
+                <div class="price-result-header">
+                  <div>
+                    <span>Calculated item subtotal</span>
+                    <strong>{{ itemPreview.lineSubtotal | currency:'USD':'symbol':'1.2-2' }}</strong>
+                  </div>
+                  <button class="add-line-button" type="button" (click)="addToDraft()">
+                    <svg lucidePackagePlus [size]="18" aria-hidden="true"></svg>
+                    {{ selectedDraftLine() ? 'Update item in draft' : 'Add item to draft' }}
+                  </button>
+                </div>
+                <dl>
+                  <div><dt>Base unit price</dt><dd>{{ itemPreview.baseUnitPrice | currency:'USD':'symbol':'1.2-2' }}</dd></div>
+                  <div><dt>Applied unit price</dt><dd>{{ itemPreview.unitPriceApplied | currency:'USD':'symbol':'1.2-2' }}</dd></div>
+                  <div><dt>Quantity</dt><dd>{{ itemPreview.quantity | number:'1.0-4' }} {{ itemPreview.unitOfMeasure }}</dd></div>
+                </dl>
+                <p class="reason"><span>Applied reason</span>{{ itemPreview.priceChangeReason }}</p>
+              </div>
+            }
+          }
+        </section>
+      </form>
+
+      <app-order-summary
+        title="Order draft"
+        [lines]="draftLines()"
+        [removable]="true"
+        [actionDisabled]="draftLines().length === 0 || submitting()"
+        [actionLabel]="submitting() ? 'Submitting order...' : 'Submit order'"
+        (lineRemoved)="removeDraftLine($event)"
+        (actionClicked)="submitOrder()" />
+    </div>
+  </section>
+</main>

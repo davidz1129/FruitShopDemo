@@ -1,0 +1,203 @@
+<main class="rules-workspace">
+  <app-top-links-bar />
+
+  <section class="rules-shell" aria-label="Product variant price rule management">
+    <header class="page-heading">
+      <div>
+        <p class="eyebrow">Pricing control</p>
+        <h1>Product variant price rules</h1>
+      </div>
+      <p>Choose an active product variant, then attach or remove its scoped price rules.</p>
+    </header>
+
+    @if (error(); as errorMessage) {
+      <p class="alert" role="alert">{{ errorMessage }}</p>
+    }
+
+    @if (confirmation(); as confirmationMessage) {
+      <div class="confirmation" role="status">
+        <span>{{ confirmationMessage }}</span>
+        <button type="button" (click)="confirmation.set(null)" aria-label="Dismiss confirmation" title="Dismiss confirmation">
+          <svg lucideX [size]="16" aria-hidden="true"></svg>
+        </button>
+      </div>
+    }
+
+    <div class="management-grid">
+      <aside class="variant-picker" aria-labelledby="variant-picker-title">
+        <div class="section-heading">
+          <p class="eyebrow">Step 1</p>
+          <h2 id="variant-picker-title">Choose a variant</h2>
+        </div>
+
+        @if (productsLoading()) {
+          <p class="empty-copy">Loading product variants...</p>
+        } @else {
+          <div class="variant-list">
+            @for (product of products(); track product.id) {
+              <section class="product-group" [attr.aria-label]="product.name">
+                <h3>{{ product.name }}</h3>
+                @for (variant of product.variants; track variant.id) {
+                  <button
+                    type="button"
+                    class="variant-option"
+                    [class.selected]="selectedVariantId() === variant.id"
+                    (click)="selectVariant(variant.id)">
+                    <strong>{{ variant.sku }}</strong>
+                    <span>{{ variant.basePrice | currency:'USD':'symbol':'1.2-2' }} / {{ variant.uomCode }}</span>
+                  </button>
+                }
+              </section>
+            } @empty {
+              <p class="empty-copy">No active product variants are available.</p>
+            }
+          </div>
+
+          @if (productTotalPages() > 1) {
+            <nav class="pagination" aria-label="Product variant pages">
+              <button type="button" class="pager-command" (click)="changeProductPage(productPage() - 1)" [disabled]="productPage() === 1" aria-label="Previous product page" title="Previous product page">
+                <svg lucideChevronLeft [size]="17" aria-hidden="true"></svg>
+              </button>
+              <span>Page {{ productPage() }} of {{ productTotalPages() }}</span>
+              <button type="button" class="pager-command" (click)="changeProductPage(productPage() + 1)" [disabled]="productPage() === productTotalPages()" aria-label="Next product page" title="Next product page">
+                <svg lucideChevronRight [size]="17" aria-hidden="true"></svg>
+              </button>
+            </nav>
+          }
+        }
+      </aside>
+
+      <section class="rule-management" aria-live="polite">
+        @if (priceRulesLoading()) {
+          <p class="empty-copy">Loading price rules...</p>
+        } @else if (priceRules(); as selectedPriceRules) {
+          <header class="selected-variant-heading">
+            <div>
+              <p class="eyebrow">Selected variant</p>
+              <h2>{{ selectedPriceRules.variant.sku }}</h2>
+            </div>
+            <p>{{ selectedPriceRules.variant.basePrice | currency:'USD':'symbol':'1.2-2' }} / {{ selectedPriceRules.variant.uomCode }}</p>
+          </header>
+
+          <section class="rule-section" aria-labelledby="assigned-title">
+            <header class="rule-section-heading">
+              <div>
+                <p class="eyebrow">Assigned</p>
+                <h3 id="assigned-title">Rules on this variant</h3>
+              </div>
+              <span>{{ selectedPriceRules.assignedPriceRules.length }}</span>
+            </header>
+
+            <ol class="rule-list">
+              @for (rule of selectedPriceRules.assignedPriceRules; track rule.id) {
+                <li class="rule-row">
+                  <div class="rule-copy">
+                    <div class="rule-name-row">
+                      <strong>{{ rule.name }}</strong>
+                      <span [class.inactive]="rule.status === 'Inactive'">{{ rule.status }}</span>
+                    </div>
+                    <p>Priority {{ rule.priority }} | {{ rule.isStackable ? 'Stackable' : 'Stops pipeline' }} | {{ conditionSummary(rule) }}</p>
+                    <div class="action-tags">
+                      @for (action of rule.actions; track $index) {
+                        <span>{{ describeAction(action) }}</span>
+                      }
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    class="rule-command detach"
+                    [disabled]="changingRuleIds().has(rule.id)"
+                    (click)="removePriceRule(rule.id)"
+                    [attr.aria-label]="'Remove ' + rule.name"
+                    [attr.title]="'Remove ' + rule.name">
+                    <svg lucideTrash2 [size]="17" aria-hidden="true"></svg>
+                  </button>
+                </li>
+              } @empty {
+                <li class="empty-copy">No scoped price rules are assigned to this variant.</li>
+              }
+            </ol>
+          </section>
+
+          <section class="rule-section global-section" aria-labelledby="global-title">
+            <header class="rule-section-heading">
+              <div>
+                <p class="eyebrow">Global</p>
+                <h3 id="global-title">Rules that also apply</h3>
+              </div>
+              <span>{{ selectedPriceRules.globalPriceRules.length }}</span>
+            </header>
+            <p class="global-note">These rules apply to every active variant and cannot be changed here.</p>
+
+            <ol class="rule-list">
+              @for (rule of selectedPriceRules.globalPriceRules; track rule.id) {
+                <li class="rule-row global-rule-row">
+                  <div class="rule-copy">
+                    <div class="rule-name-row">
+                      <strong>{{ rule.name }}</strong>
+                      <span [class.inactive]="rule.status === 'Inactive'">{{ rule.status }}</span>
+                    </div>
+                    <p>Priority {{ rule.priority }} | {{ rule.isStackable ? 'Stackable' : 'Stops pipeline' }} | {{ conditionSummary(rule) }}</p>
+                    <div class="action-tags">
+                      @for (action of rule.actions; track $index) {
+                        <span>{{ describeAction(action) }}</span>
+                      }
+                    </div>
+                  </div>
+                </li>
+              } @empty {
+                <li class="empty-copy">No global price rules apply to every variant.</li>
+              }
+            </ol>
+          </section>
+
+          <section class="rule-section available-section" aria-labelledby="available-title">
+            <header class="rule-section-heading">
+              <div>
+                <p class="eyebrow">Available</p>
+                <h3 id="available-title">Assign a price rule</h3>
+              </div>
+              <span>{{ selectedPriceRules.availablePriceRules.length }}</span>
+            </header>
+
+            <ol class="rule-list">
+              @for (rule of selectedPriceRules.availablePriceRules; track rule.id) {
+                <li class="rule-row">
+                  <div class="rule-copy">
+                    <div class="rule-name-row">
+                      <strong>{{ rule.name }}</strong>
+                      <span [class.inactive]="rule.status === 'Inactive'">{{ rule.status }}</span>
+                    </div>
+                    <p>Priority {{ rule.priority }} | {{ rule.isStackable ? 'Stackable' : 'Stops pipeline' }} | {{ conditionSummary(rule) }}</p>
+                    <div class="action-tags">
+                      @for (action of rule.actions; track $index) {
+                        <span>{{ describeAction(action) }}</span>
+                      }
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    class="rule-command attach"
+                    [disabled]="changingRuleIds().has(rule.id)"
+                    (click)="assignPriceRule(rule.id)"
+                    [attr.aria-label]="'Assign ' + rule.name"
+                    [attr.title]="'Assign ' + rule.name">
+                    <svg lucideCirclePlus [size]="18" aria-hidden="true"></svg>
+                  </button>
+                </li>
+              } @empty {
+                <li class="empty-copy">All scoped price rules are already assigned to this variant.</li>
+              }
+            </ol>
+          </section>
+        } @else {
+          <div class="empty-state">
+            <p class="eyebrow">Step 2</p>
+            <h2>Review variant rules</h2>
+            <p>Choose a product variant to view its assigned rules and available assignments.</p>
+          </div>
+        }
+      </section>
+    </div>
+  </section>
+</main>

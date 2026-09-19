@@ -1,0 +1,12 @@
+@baseUrl = http://localhost:5173
+@variantId = 1
+@priceRuleId = 1
+
+### Load a variant's assigned and available scoped price rules
+GET {{baseUrl}}/api/admin/variants/{{variantId}}/price-rules
+
+### Assign a scoped price rule to a variant
+PUT {{baseUrl}}/api/admin/variants/{{variantId}}/price-rules/{{priceRuleId}}
+
+### Remove a scoped price rule from a variant
+DELETE {{baseUrl}}/api/admin/variants/{{variantId}}/price-rules/{{priceRuleId}}

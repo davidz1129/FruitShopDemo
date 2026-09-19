@@ -1,0 +1,308 @@
+<main class="admin-workspace">
+  <app-top-links-bar />
+
+  <section class="admin-shell" aria-label="Catalog administration">
+    <div class="admin-heading">
+      <div>
+        <p class="eyebrow">Catalog control</p>
+        <h1>Products &amp; price rules</h1>
+      </div>
+      @if (catalog(); as catalog) {
+        <p class="catalog-count">{{ catalog.products.totalCount }} products<br />{{ activeVariants().length }} active variants on this page</p>
+      }
+    </div>
+
+    @if (error(); as errorMessage) {
+      <p class="alert" role="alert">{{ errorMessage }}</p>
+    }
+
+    @if (confirmation(); as confirmationMessage) {
+      <div class="confirmation" role="status">
+        <span>{{ confirmationMessage }}</span>
+        <button type="button" (click)="confirmation.set(null)" aria-label="Dismiss confirmation" title="Dismiss confirmation">
+          <svg lucideX [size]="16" aria-hidden="true"></svg>
+        </button>
+      </div>
+    }
+
+    @if (catalogLoading()) {
+      <p class="loading-copy">Loading catalog...</p>
+    } @else if (catalog(); as catalog) {
+      <div class="admin-grid">
+        <section class="catalog-column" aria-labelledby="catalog-title">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">Products</p>
+              <h2 id="catalog-title">Catalog</h2>
+            </div>
+            <span>{{ catalog.products.totalCount }}</span>
+          </div>
+
+          <form class="admin-form compact-form" [formGroup]="productForm" (ngSubmit)="createProduct()">
+            <label for="product-name">Product name</label>
+            <div class="inline-field">
+              <input id="product-name" type="text" formControlName="name" placeholder="e.g. Pink Lady Apples" />
+              <button class="icon-command" type="submit" [disabled]="productSaving()" title="Add product" aria-label="Add product">
+                <svg lucideCirclePlus [size]="19" aria-hidden="true"></svg>
+              </button>
+            </div>
+          </form>
+
+          <form class="admin-form variant-form" [formGroup]="variantForm" (ngSubmit)="createVariant()">
+            <div class="form-label-row">
+              <label for="variant-product">New variant</label>
+              <span>Available immediately</span>
+            </div>
+            <div class="variant-fields">
+              <select id="variant-product" formControlName="productId" aria-label="Product">
+                <option [ngValue]="null">Choose product</option>
+                @for (product of catalog.products.items; track product.id) {
+                  <option [ngValue]="product.id">{{ product.name }}</option>
+                }
+              </select>
+              <input type="text" formControlName="sku" placeholder="SKU" aria-label="SKU" />
+              <select formControlName="uomCode" aria-label="Unit of measure">
+                <option value="">Unit</option>
+                @for (unit of catalog.unitsOfMeasure; track unit.code) {
+                  <option [value]="unit.code">{{ unit.code }} / {{ unit.measureType }}</option>
+                }
+              </select>
+              <input type="number" formControlName="uomFactor" min="0.0001" step="0.0001" aria-label="Unit factor" placeholder="Factor" />
+              <input type="number" formControlName="basePrice" min="0" step="0.01" aria-label="Base price" placeholder="Base price" />
+              <button class="icon-command" type="submit" [disabled]="variantSaving()" title="Add product variant" aria-label="Add product variant">
+                <svg lucideCirclePlus [size]="19" aria-hidden="true"></svg>
+              </button>
+            </div>
+          </form>
+
+          <div class="product-list">
+            @for (product of catalog.products.items; track product.id) {
+              <article class="product-row">
+                <header>
+                  <h3>{{ product.name }}</h3>
+                  <span>{{ product.variants.length }} variant{{ product.variants.length === 1 ? '' : 's' }}</span>
+                </header>
+                @if (product.variants.length === 0) {
+                  <p class="empty-copy">No variants</p>
+                } @else {
+                  <ul class="variant-list">
+                    @for (variant of product.variants; track variant.id) {
+                      <li [class.disabled]="!variant.isActive">
+                        <div>
+                          <strong>{{ variant.sku }}</strong>
+                          <span>{{ variant.basePrice | currency:'USD':'symbol':'1.2-2' }} / {{ variant.uomCode }} <small>factor {{ variant.uomFactor | number:'1.0-4' }}</small></span>
+                        </div>
+                        <button
+                          class="status-command"
+                          type="button"
+                          [class.enabled]="variant.isActive"
+                          [disabled]="changingVariantIds().has(variant.id)"
+                          [attr.aria-label]="variant.isActive ? 'Disable ' + variant.sku : 'Enable ' + variant.sku"
+                          [attr.title]="variant.isActive ? 'Disable product variant' : 'Enable product variant'"
+                          (click)="changeVariantStatus(variant)">
+                          @if (variant.isActive) {
+                            <svg lucidePower [size]="15" aria-hidden="true"></svg>
+                            <span>Enabled</span>
+                          } @else {
+                            <svg lucidePowerOff [size]="15" aria-hidden="true"></svg>
+                            <span>Disabled</span>
+                          }
+                        </button>
+                      </li>
+                    }
+                  </ul>
+                }
+              </article>
+            } @empty {
+              <p class="empty-copy">No products yet.</p>
+            }
+          </div>
+          @if (catalog.products.totalPages > 1) {
+            <nav class="pagination" aria-label="Catalog product pages">
+              <button type="button" class="pager-command" (click)="changeProductPage(catalog.products.page - 1)" [disabled]="catalog.products.page === 1" aria-label="Previous product page" title="Previous product page">
+                <svg lucideChevronLeft [size]="17" aria-hidden="true"></svg>
+              </button>
+              <span>Page {{ catalog.products.page }} of {{ catalog.products.totalPages }}</span>
+              <button type="button" class="pager-command" (click)="changeProductPage(catalog.products.page + 1)" [disabled]="catalog.products.page === catalog.products.totalPages" aria-label="Next product page" title="Next product page">
+                <svg lucideChevronRight [size]="17" aria-hidden="true"></svg>
+              </button>
+            </nav>
+          }
+        </section>
+
+        <section class="rules-column" aria-labelledby="rules-title">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">Pricing</p>
+              <h2 id="rules-title">New price rule</h2>
+            </div>
+            <span>{{ catalog.priceRules.totalCount }}</span>
+          </div>
+
+          <form class="rule-form" [formGroup]="ruleForm" (ngSubmit)="createPriceRule()">
+            <div class="rule-basics">
+              <label>
+                Rule name
+                <input type="text" formControlName="name" placeholder="e.g. VIP early harvest" />
+              </label>
+              <label>
+                Priority
+                <input type="number" formControlName="priority" min="0" max="10000" step="1" />
+              </label>
+            </div>
+
+            <fieldset class="switch-row">
+              <label>
+                <input type="checkbox" formControlName="isStackable" />
+                <span>Stack with later rules</span>
+              </label>
+              <label>
+                <input type="checkbox" formControlName="appliesToAllVariants" />
+                <span>All active variants</span>
+              </label>
+            </fieldset>
+
+            <fieldset class="target-fieldset" [disabled]="ruleForm.controls.appliesToAllVariants.value">
+              <legend>Variant targets</legend>
+              <div class="target-list">
+                @for (target of activeVariants(); track target.variant.id) {
+                  <label>
+                    <input
+                      type="checkbox"
+                      [checked]="selectedVariantIds().has(target.variant.id)"
+                      (change)="toggleVariantTarget(target.variant.id, $any($event.target).checked)" />
+                    <span>{{ target.productName }} <b>{{ target.variant.sku }}</b></span>
+                  </label>
+                } @empty {
+                  <p class="empty-copy">Add an active product variant first.</p>
+                }
+              </div>
+            </fieldset>
+
+            <fieldset class="target-fieldset tier-fieldset">
+              <legend>Customer tiers <small>Optional</small></legend>
+              <div class="tier-targets">
+                @for (tier of customerTiers; track tier) {
+                  <label [class.selected]="selectedCustomerTiers().has(tier)">
+                    <input
+                      type="checkbox"
+                      [checked]="selectedCustomerTiers().has(tier)"
+                      (change)="toggleCustomerTier(tier, $any($event.target).checked)" />
+                    <span>{{ tier }}</span>
+                  </label>
+                }
+              </div>
+            </fieldset>
+
+            <section class="rule-section" formArrayName="conditions">
+              <header>
+                <div>
+                  <h3>Conditions</h3>
+                  <span>All must be met</span>
+                </div>
+                <button class="icon-command" type="button" (click)="addCondition()" title="Add condition" aria-label="Add condition">
+                  <svg lucideCirclePlus [size]="18" aria-hidden="true"></svg>
+                </button>
+              </header>
+              @for (condition of ruleForm.controls.conditions.controls; track $index; let index = $index) {
+                <div class="rule-line" [formGroupName]="index">
+                  <select formControlName="attribute" aria-label="Condition attribute" (change)="normalizeConditionOperator(condition)">
+                    <option value="Quantity">Quantity</option>
+                    <option value="CustomerTier">Customer tier</option>
+                    <option value="CartSubtotal">Cart subtotal</option>
+                    <option value="OrderDate">Order date</option>
+                  </select>
+                  <select formControlName="operator" aria-label="Condition operator">
+                    @for (operator of conditionOperators(condition.controls['attribute'].value); track operator) {
+                      <option [value]="operator">{{ operator }}</option>
+                    }
+                  </select>
+                  <input
+                    type="text"
+                    formControlName="value"
+                    [placeholder]="conditionValuePlaceholder(condition.controls['attribute'].value, condition.controls['operator'].value)"
+                    aria-label="Condition value" />
+                  <button class="remove-command" type="button" (click)="removeCondition(index)" title="Remove condition" aria-label="Remove condition">
+                    <svg lucideX [size]="16" aria-hidden="true"></svg>
+                  </button>
+                </div>
+              } @empty {
+                <p class="empty-copy">Always applies when its targets match.</p>
+              }
+            </section>
+
+            <section class="rule-section" formArrayName="actions">
+              <header>
+                <div>
+                  <h3>Price actions</h3>
+                  <span>Applied in listed order</span>
+                </div>
+                <button class="icon-command" type="button" (click)="addAction()" title="Add price action" aria-label="Add price action">
+                  <svg lucideCirclePlus [size]="18" aria-hidden="true"></svg>
+                </button>
+              </header>
+              @for (action of ruleForm.controls.actions.controls; track $index; let index = $index) {
+                <div class="rule-line action-line" [formGroupName]="index">
+                  <select formControlName="actionType" aria-label="Action type">
+                    <option value="PercentageDiscount">Percentage discount</option>
+                    <option value="AmountOff">Amount off</option>
+                    <option value="OverridePrice">Override price</option>
+                  </select>
+                  <input type="number" formControlName="amount" min="0" step="0.01" aria-label="Action amount" placeholder="Amount" />
+                  <select formControlName="calculationBase" aria-label="Calculation base">
+                    <option value="RunningTotal">Running total</option>
+                    <option value="OriginalBase">Original base</option>
+                  </select>
+                  <button class="remove-command" type="button" [disabled]="ruleForm.controls.actions.length === 1" (click)="removeAction(index)" title="Remove price action" aria-label="Remove price action">
+                    <svg lucideX [size]="16" aria-hidden="true"></svg>
+                  </button>
+                </div>
+              }
+            </section>
+
+            <button class="save-rule" type="submit" [disabled]="ruleSaving()">
+              <svg lucideSave [size]="18" aria-hidden="true"></svg>
+              {{ ruleSaving() ? 'Saving rule...' : 'Add price rule' }}
+            </button>
+          </form>
+
+          <section class="rule-index" aria-labelledby="active-rules-title">
+            <div class="rule-index-heading">
+              <p class="eyebrow">Existing</p>
+              <h3 id="active-rules-title">Price rules</h3>
+            </div>
+            <ol>
+              @for (rule of catalog.priceRules.items; track rule.id) {
+                <li [class.inactive]="rule.status === 'Inactive'">
+                  <div class="rule-index-title">
+                    <strong>{{ rule.name }}</strong>
+                    <span>Priority {{ rule.priority }}</span>
+                  </div>
+                  <p>{{ rule.appliesToAllVariants ? 'All variants' : rule.targetVariantIds.length + ' variant target' + (rule.targetVariantIds.length === 1 ? '' : 's') }} | {{ rule.isStackable ? 'Stackable' : 'Stops pipeline' }}</p>
+                  <div class="rule-tags">
+                    @for (action of rule.actions; track $index) {
+                      <span>{{ describeAction(action) }} / {{ actionBaseLabel(action) }}</span>
+                    }
+                  </div>
+                </li>
+              } @empty {
+                <li class="empty-copy">No price rules yet.</li>
+              }
+            </ol>
+            @if (catalog.priceRules.totalPages > 1) {
+              <nav class="pagination" aria-label="Price rule pages">
+                <button type="button" class="pager-command" (click)="changePriceRulePage(catalog.priceRules.page - 1)" [disabled]="catalog.priceRules.page === 1" aria-label="Previous price rule page" title="Previous price rule page">
+                  <svg lucideChevronLeft [size]="17" aria-hidden="true"></svg>
+                </button>
+                <span>Page {{ catalog.priceRules.page }} of {{ catalog.priceRules.totalPages }}</span>
+                <button type="button" class="pager-command" (click)="changePriceRulePage(catalog.priceRules.page + 1)" [disabled]="catalog.priceRules.page === catalog.priceRules.totalPages" aria-label="Next price rule page" title="Next price rule page">
+                  <svg lucideChevronRight [size]="17" aria-hidden="true"></svg>
+                </button>
+              </nav>
+            }
+          </section>
+        </section>
+      </div>
+    }
+  </section>
+</main>
