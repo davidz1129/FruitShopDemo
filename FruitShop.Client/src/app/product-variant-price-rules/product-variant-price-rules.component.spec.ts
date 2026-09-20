@@ -120,4 +120,31 @@ describe('ProductVariantPriceRulesComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('15% off');
     expect(fixture.nativeElement.querySelector('[aria-label="Remove VIP apple discount"]')).not.toBeNull();
   });
+
+  it('renders readable conditions for assigned and available price rules', () => {
+    priceRulesResponse = {
+      ...priceRules,
+      assignedPriceRules: [{
+        ...priceRules.availablePriceRules[0],
+        id: 21,
+        name: 'Assigned VIP discount',
+        conditions: [{ attribute: 'OrderTotal', operator: 'GreaterThanOrEqual', value: '50' }]
+      }],
+      availablePriceRules: [{
+        ...priceRules.availablePriceRules[0],
+        conditions: [{ attribute: 'CustomerTier', operator: '=', value: 'VIP' }]
+      }]
+    };
+    const fixture = TestBed.createComponent(ProductVariantPriceRulesComponent);
+    const component = fixture.componentInstance as unknown as {
+      selectVariant(variantId: number): void;
+    };
+
+    component.selectVariant(11);
+    fixture.detectChanges();
+
+    const ruleRows = fixture.nativeElement.querySelectorAll('.rule-row');
+    expect(ruleRows[0].textContent).toContain('OrderTotal is at least 50');
+    expect(ruleRows[1].textContent).toContain('CustomerTier is VIP');
+  });
 });

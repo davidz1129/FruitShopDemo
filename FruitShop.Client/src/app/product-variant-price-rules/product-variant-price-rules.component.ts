@@ -4,7 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LucideChevronLeft, LucideChevronRight, LucideCirclePlus, LucideTrash2, LucideX } from '@lucide/angular';
 import { finalize, switchMap } from 'rxjs';
 import { TopLinksBarComponent } from '../shared/top-links-bar.component';
-import { AdminPriceRule, ApiService, PriceRuleAction, Product, ProductVariantPriceRulesResponse } from '../services/api.service';
+import { AdminPriceRule, ApiService, PriceRuleAction, PriceRuleCondition, Product, ProductVariantPriceRulesResponse } from '../services/api.service';
 
 @Component({
   selector: 'app-product-variant-price-rules',
@@ -116,10 +116,16 @@ export class ProductVariantPriceRulesComponent {
     }
   }
 
-  protected conditionSummary(rule: AdminPriceRule): string {
-    return rule.conditions.length === 0
-      ? 'No conditions'
-      : `${rule.conditions.length} condition${rule.conditions.length === 1 ? '' : 's'}`;
+  protected describeCondition(condition: PriceRuleCondition): string {
+    const operatorLabels: Record<string, string> = {
+      GreaterThan: 'is greater than',
+      GreaterThanOrEqual: 'is at least',
+      LessThan: 'is less than',
+      LessThanOrEqual: 'is at most',
+      '=': 'is'
+    };
+
+    return `${condition.attribute} ${operatorLabels[condition.operator] ?? condition.operator} ${condition.value}`;
   }
 
   private loadProducts(): void {

@@ -96,7 +96,14 @@
                       <strong>{{ rule.name }}</strong>
                       <span [class.inactive]="rule.status === 'Inactive'">{{ rule.status }}</span>
                     </div>
-                    <p>Priority {{ rule.priority }} | {{ rule.isStackable ? 'Stackable' : 'Stops pipeline' }} | {{ conditionSummary(rule) }}</p>
+                    <p>Priority {{ rule.priority }} | {{ rule.isStackable ? 'Stackable' : 'Stops pipeline' }}</p>
+                    @if (rule.conditions.length > 0) {
+                      <div class="action-tags">
+                        @for (condition of rule.conditions; track $index) {
+                          <span>{{ describeCondition(condition) }}</span>
+                        }
+                      </div>
+                    }
                     <div class="action-tags">
                       @for (action of rule.actions; track $index) {
                         <span>{{ describeAction(action) }}</span>
@@ -137,7 +144,7 @@
                       <strong>{{ rule.name }}</strong>
                       <span [class.inactive]="rule.status === 'Inactive'">{{ rule.status }}</span>
                     </div>
-                    <p>Priority {{ rule.priority }} | {{ rule.isStackable ? 'Stackable' : 'Stops pipeline' }} | {{ conditionSummary(rule) }}</p>
+                    <p>Priority {{ rule.priority }} | {{ rule.isStackable ? 'Stackable' : 'Stops pipeline' }}</p>
                     <div class="action-tags">
                       @for (action of rule.actions; track $index) {
                         <span>{{ describeAction(action) }}</span>
@@ -168,7 +175,14 @@
                       <strong>{{ rule.name }}</strong>
                       <span [class.inactive]="rule.status === 'Inactive'">{{ rule.status }}</span>
                     </div>
-                    <p>Priority {{ rule.priority }} | {{ rule.isStackable ? 'Stackable' : 'Stops pipeline' }} | {{ conditionSummary(rule) }}</p>
+                    <p>Priority {{ rule.priority }} | {{ rule.isStackable ? 'Stackable' : 'Stops pipeline' }}</p>
+                    @if (rule.conditions.length > 0) {
+                      <div class="action-tags">
+                        @for (condition of rule.conditions; track $index) {
+                          <span>{{ describeCondition(condition) }}</span>
+                        }
+                      </div>
+                    }
                     <div class="action-tags">
                       @for (action of rule.actions; track $index) {
                         <span>{{ describeAction(action) }}</span>
